@@ -1,3 +1,4 @@
+import copy
 from Piece import Piece
 from Pion import Pion
 from Tours import Tour
@@ -17,6 +18,33 @@ def generer_coups_possibles(board, couleur_joueur):
         for (to_row, to_col) in deplacements:
           coups_possibles.append((ligne, col, to_row, to_col))
   return coups_possibles
+
+# ----------------------------------------------------------- #
+
+def copier_plateau(board):
+  new_board = [[None for _ in range(8)] for _ in range(8)]
+  for i in range(8):
+    for j in range(8):
+      piece = board[i][j]
+      if piece is not None:
+        new_board[i][j] = piece.__class__(piece.couleur, piece.ligne, piece.col)
+  return new_board
+
+# ----------------------------------------------------------- #
+
+def jouer_coup(board, coup):
+  from_row, from_col, to_row, to_col = coup
+  piece = board[from_row][from_col]
+
+  if piece is None:
+    return # erreur silencieuse
+
+  # Met à jour la position interne de la pièce
+  piece.ligne, piece.col = to_row, to_col
+
+  # Déplace la pièce
+  board[to_row][to_col] = piece
+  board[from_row][from_col] = None
 
 # ----------------------------------------------------------- #
 
@@ -76,6 +104,43 @@ def play_game():
     turn = 'N' if turn == 'B' else 'B'
   print("Fin du jeu")
 play_game()
+
+def minimax(board, profondeur, maximisant):
+  if profondeur == 0:
+    return evaluer_plateau(board), None
+  
+  couleur = "blanc" if maximisant else "noir"
+  coups_possibles = generer_coups_possibles(board, couleur)
+
+  if not coups_possibles:
+    return evaluer_plateau(board), None
+  
+  meilleur_coup = None
+  if maximisant:
+    max_eval = float('-inf')
+    for coup in coups_possibles:
+      copie = copier_plateau(board)
+      jouer_coup(copie, coup)
+      eval, _ = minimax(copie, profondeur - 1, False)
+      if eval > max_eval:
+        max_eval = eval
+        meilleur_coup = coup
+    return max_eval, meilleur_coup
+  else:
+    min_eval = float('inf')
+    for coup in coups_possibles:
+      copie = copier_plateau(board)
+      jouer_coup(copie, coup)
+      eval, _ = minimax(copie, profondeur - 1, True)
+      if eval < min_eval:
+        min_eval = eval
+        meilleur_coup = coup
+    return min_eval, meilleur_coup
+
+  
+_, meilleur_coup = minimax(board, 2, True)
+jouer_coup(board, meilleur_coup)
+print_board(board)
 
 coups_blancs = generer_coups_possibles(board, 'blanc')
 print("Coups possibles pour les blancs :")
